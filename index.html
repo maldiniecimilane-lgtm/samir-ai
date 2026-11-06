@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Samir AI | مساعد ذكاء اصطناعي</title>
+<meta name="description" content="Samir AI مساعد ذكاء اصطناعي بالعربية: اسأل، أرسل صوراً، وتحدث بصوتك.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<style>
+:root{--bg:#f6f5f1;--surface:#fff;--text:#1d1d1b;--muted:#6b6a65;--accent:#2f6fed;--onaccent:#fff;--bot:#ecebe5;--border:#dcdad2;--rec:#e5484d;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--surface:#212121;--text:#ececec;--muted:#9a9a95;--accent:#5b8cff;--onaccent:#0b0b0b;--bot:#2b2b2b;--border:#3a3a3a;color-scheme:dark}}
+html{height:100%}*{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;display:flex;flex-direction:column}
+header{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center;font-weight:700}
+header b{font-size:17px}header small{display:block;color:var(--muted);font-size:12px;line-height:1.2}header .sp{flex:1}
+#log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;max-width:760px;width:100%;margin:0 auto}
+.m{max-width:85%;padding:10px 14px;border-radius:16px;white-space:pre-wrap;word-break:break-word}
+.u{align-self:flex-start;background:var(--accent);color:var(--onaccent);border-bottom-right-radius:4px}
+.b{align-self:flex-end;background:var(--bot);border-bottom-left-radius:4px}
+.imgs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}.imgs img{width:64px;height:64px;object-fit:cover;border-radius:8px}
+.hello{margin:auto;text-align:center;color:var(--muted)}.hello h2{color:var(--text);margin:0 0 6px}
+.bar{background:var(--surface);border-top:1px solid var(--border)}
+#prev{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 0;max-width:760px;margin:0 auto}
+#prev div{position:relative;flex:none}#prev img{width:56px;height:56px;object-fit:cover;border-radius:8px;display:block}
+#prev button{position:absolute;top:-4px;left:-4px;width:20px;height:20px;border-radius:50%;padding:0;font-size:12px;background:var(--text);color:var(--bg)}
+#cnt{font-size:12px;color:var(--muted);padding:2px 14px;max-width:760px;margin:0 auto}
+form{display:flex;gap:6px;padding:8px 12px 10px;max-width:760px;margin:0 auto;align-items:flex-end}
+textarea{flex:1;resize:none;max-height:120px;border:1px solid var(--border);border-radius:14px;padding:10px 12px;font:inherit;background:var(--bg);color:var(--text)}
+button{border:0;border-radius:14px;background:var(--accent);color:var(--onaccent);padding:0 16px;height:44px;font:inherit;font-weight:600;cursor:pointer}
+button.ic{background:var(--bot);color:var(--text);padding:0;width:44px;font-size:19px}button.ic.on{background:var(--rec);color:#fff}button:disabled{opacity:.5}
+</style>
+</head>
+<body>
+<header><div class="logo">S</div><div><b>Samir AI</b><small>مساعدك الذكي</small></div><span class="sp"></span><button class="ic" id="spk" type="button" title="القراءة بصوت عالٍ">🔇</button></header>
+<div id="log"><div class="hello" id="hello"><h2>أهلاً، أنا Samir AI 👋</h2>اسألني، أرسل لي صوراً، أو كلّمني بصوتك</div></div>
+<div class="bar"><div id="prev"></div><div id="cnt"></div>
+<form id="f"><button class="ic" id="att" type="button" title="إرفاق صور">📎</button><input id="file" type="file" accept="image/*" multiple hidden>
+<textarea id="t" rows="1" placeholder="اكتب رسالتك…"></textarea><button class="ic" id="mic" type="button" title="تحدّث">🎤</button><button id="s" type="submit">إرسال</button></form></div>
+<script>
+const MAX=15,$=id=>document.getElementById(id);
+const log=$("log"),f=$("f"),t=$("t"),s=$("s"),prev=$("prev"),cnt=$("cnt"),file=$("file"),mic=$("mic"),spk=$("spk");
+const hist=[];let pending=[],speakOn=false,fromVoice=false,busy=false;
+function add(c,x,urls){$("hello")?.remove();const d=document.createElement("div");d.className="m "+c;
+ if(urls&&urls.length){const w=document.createElement("div");w.className="imgs";urls.forEach(u=>{const i=document.createElement("img");i.src=u;w.appendChild(i)});d.appendChild(w)}
+ const p=document.createElement("span");p.textContent=x;d.appendChild(p);log.appendChild(d);log.scrollTop=log.scrollHeight;return p}
+function shrink(fl){return new Promise(res=>{const u=URL.createObjectURL(fl),im=new Image();
+ im.onload=()=>{const k=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(b=>{URL.revokeObjectURL(u);res(b)},"image/jpeg",.7)};
+ im.onerror=()=>{URL.revokeObjectURL(u);res(null)};im.src=u})}
+const b64=b=>new Promise(r=>{const x=new FileReader();x.onload=()=>r(String(x.result).split(",")[1]);x.readAsDataURL(b)});
+function renderPrev(){prev.innerHTML="";pending.forEach((p,i)=>{const d=document.createElement("div"),im=document.createElement("img"),b=document.createElement("button");
+ im.src=p.url;b.type="button";b.textContent="×";b.onclick=()=>{URL.revokeObjectURL(p.url);pending.splice(i,1);renderPrev()};d.append(im,b);prev.appendChild(d)});
+ cnt.textContent=pending.length?pending.length+" / "+MAX+" صورة":""}
+$("att").onclick=()=>file.click();
+file.onchange=async()=>{const room=MAX-pending.length,fs=[...file.files].slice(0,room);
+ for(const x of fs){const b=await shrink(x);if(b)pending.push({blob:b,url:URL.createObjectURL(b)})}
+ file.value="";renderPrev()};
+t.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();f.requestSubmit()}});
+function speak(x){if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(x);u.lang=/[\u0600-\u06FF]/.test(x)?"ar":"en-US";speechSynthesis.speak(u)}
+spk.onclick=()=>{speakOn=!speakOn;spk.textContent=speakOn?"🔊":"🔇";if(!speakOn&&window.speechSynthesis)speechSynthesis.cancel()};
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
+if(!SR)mic.hidden=true;else mic.onclick=()=>{
+ if(rec){rec.stop();return}
+ if(window.speechSynthesis)speechSynthesis.cancel();
+ rec=new SR();rec.lang="ar-SA";rec.interimResults=true;rec.continuous=false;mic.classList.add("on");
+ rec.onresult=e=>{let x="";for(const r of e.results)x+=r[0].transcript;t.value=x};
+ rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed")add("b","اسمح للميكروفون من إعدادات المتصفح.")};
+ rec.onend=()=>{mic.classList.remove("on");rec=null;if(t.value.trim()){fromVoice=true;f.requestSubmit()}};
+ try{rec.start()}catch(_){mic.classList.remove("on");rec=null}};
+f.addEventListener("submit",async e=>{
+ e.preventDefault();const q=t.value.trim();if((!q&&!pending.length)||busy)return;
+ const imgs=pending;pending=[];renderPrev();t.value="";
+ const text=q||"حلّل هذه الصور.";add("u",q,imgs.map(p=>p.url));
+ const out=add("b","…");busy=true;s.disabled=true;const voice=fromVoice;fromVoice=false;
+ try{
+  const images=await Promise.all(imgs.map(p=>b64(p.blob)));
+  hist.push({role:"user",content:text});
+  const payload=hist.map((m,i)=>i===hist.length-1&&images.length?{...m,images}:m);
+  const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:payload})});
+  if(r.status===429)throw new Error("rate");
+  if(!r.ok)throw new Error("fail");
+  const d=await r.json();out.textContent=d.text;hist.push({role:"assistant",content:d.text});
+  if(speakOn||voice)speak(d.text);
+ }catch(err){hist.pop();out.textContent=err.message==="rate"?"وصلت للحد المسموح، جرّب بعد قليل.":"تعذّر الرد، حاول مرة أخرى."}
+ busy=false;s.disabled=false;t.focus();
+});
+</script>
+</body>
+</html>
